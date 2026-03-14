@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Lango AI — Low-Resource Language Translation</title>
+
+  <!--
+    La Lango AI — Frontend
+    ─────────────────────────────────────────────────────────────
+    A single HTML file. No build step. No framework. No fuss.
+
+    To run:
+      1. Start the backend:  uvicorn lalango.api.main:app --reload
+      2. Open this file in a browser (or use Live Server in VS Code)
+
+    The JS at the bottom of this file calls the backend API.
+    Everything is commented so you can follow along and contribute.
+
+    Want to improve this UI? See frontend/README.md for contribution ideas.
+  -->
+
+  <!-- Google Fonts — Playfair Display for headings, IBM Plex Mono for code/input -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:wght@300;400&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ─────────────────────────────────────────────────────────────
+       CSS Variables — change these to retheme the whole UI
+       ───────────────────────────────────────────────────────────── */
+    :root {
+      --bg:           #18140f;      /* deep warm charcoal */
+      --bg-card:      #231d16;      /* slightly lighter card background */
+      --bg-input:     #2a2219;      /* input field background */
+      --border:       #3d3028;      /* subtle warm border */
+      --border-focus: #c9923a;      /* amber border on focus */
+      --gold:         #c9923a;      /* primary accent — warm amber */
+      --gold-light:   #e8b86d;      /* lighter amber for hover/highlight */
+      --cream:        #f0e6d3;      /* warm cream text */
+      --muted:        #8a7a68;      /* secondary/muted text */
+      --red:          #c0503a;      /* error state */
+      --green:        #5a9e6f;      /* success state */
+
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-body:    'Source Serif 4', Georgia, serif;
+      --font-mono:    'IBM Plex Mono', 'Courier New', monospace;
+
+      --radius:       4px;
+      --transition:   0.2s ease;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Reset & Base
+       ───────────────────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--cream);
+      font-family: var(--font-body);
+      font-weight: 300;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+
+      /* Subtle grain texture to give depth */
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Layout
+       ───────────────────────────────────────────────────────────── */
+    .page-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Header
+       ───────────────────────────────────────────────────────────── */
+    header {
+      padding: 56px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 52px;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      color: var(--cream);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    /* The golden dot after "La Lango" */
+    .brand span {
+      color: var(--gold);
+    }
+
+    .brand-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--gold);
+      border: 1px solid var(--gold);
+      padding: 2px 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      white-space: nowrap;
+    }
+
+    .tagline {
+      margin-top: 12px;
+      font-size: 1rem;
+      color: var(--muted);
+      font-style: italic;
+      font-family: var(--font-display);
+    }
+
+    .header-links {
+      margin-top: 16px;
+      display: flex;
+      gap: 20px;
+    }
+
+    .header-links a {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: color var(--transition);
+    }
+
+    .header-links a:hover {
+      color: var(--gold-light);
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Section headings
+       ───────────────────────────────────────────────────────────── */
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 12px;
+      opacity: 0.8;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Language Pair Selector
+       ───────────────────────────────────────────────────────────── */
+    .lang-selector-section {
+      margin-bottom: 36px;
+    }
+
+    .lang-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .lang-select-wrapper {
+      position: relative;
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .lang-select-wrapper select {
+      width: 100%;
+      appearance: none;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--cream);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      padding: 12px 40px 12px 16px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition);
+      outline: none;
+    }
+
+    .lang-select-wrapper select:focus,
+    .lang-select-wrapper select:hover {
+      border-color: var(--border-focus);
+      background: #312619;
+    }
+
+    /* Custom dropdown arrow */
+    .lang-select-wrapper::after {
+      content: '▾';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gold);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+
+    /* The arrow between source and target language */
+    .lang-arrow {
+      font-family: var(--font-mono);
+      color: var(--gold);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Translation Panel — the two text areas side by side
+       ───────────────────────────────────────────────────────────── */
+    .translation-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    /* On small screens, stack vertically */
+    @media (max-width: 600px) {
+      .translation-panel {
+        grid-template-columns: 1fr;
+      }
+      .panel-divider {
+        display: none;
+      }
+    }
+
+    .panel-divider {
+      width: 1px;
+      background: var(--border);
+    }
+
+    .panel-side {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-lang-name {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* Character count and copy button in the panel header */
+    .panel-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .char-count {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .char-count.over-limit {
+      color: var(--red);
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 2px 6px;
+      border-radius: var(--radius);
+      transition: color var(--transition), background var(--transition);
+      font-family: var(--font-mono);
+      letter-spacing: 0.05em;
+    }
+
+    .btn-icon:hover {
+      color: var(--gold-light);
+      background: rgba(201, 146, 58, 0.08);
+    }
+
+    /* The actual text areas */
+    .panel-textarea {
+      flex: 1;
+      background: var(--bg-input);
+      border: none;
+      color: var(--cream);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      padding: 20px;
+      resize: none;
+      outline: none;
+      min-height: 180px;
+      width: 100%;
+      transition: background var(--transition);
+    }
+
+    .panel-textarea::placeholder {
+      color: var(--muted);
+      opacity: 0.6;
+      font-style: italic;
+    }
+
+    .panel-textarea:focus {
+      background: #2f2418;
+    }
+
+    /* Output panel — not editable, slightly different background */
+    .panel-output {
+      flex: 1;
+      background: #1e1810;
+      min-height: 180px;
+      padding: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--cream);
+      white-space: pre-wrap;
+      word-break: break-word;
+
+      /* Faint left border to distinguish it */
+      border-left: 2px solid var(--border);
+    }
+
+    .panel-output.empty {
+      color: var(--muted);
+      font-style: italic;
+      opacity: 0.5;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Translate Button
+       ───────────────────────────────────────────────────────────── */
+    .btn-translate {
+      background: var(--gold);
+      color: var(--bg);
+      border: none;
+      padding: 14px 40px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition), opacity var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-translate:hover:not(:disabled) {
+      background: var(--gold-light);
+      transform: translateY(-1px);
+    }
+
+    .btn-translate:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-translate:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* Spinner inside the button while loading */
+    .spinner {
+      display: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(24, 20, 15, 0.3);
+      border-top-color: var(--bg);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .btn-translate.loading .spinner {
+      display: block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Status / Error Messages
+       ───────────────────────────────────────────────────────────── */
+    .status-message {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      display: none;
+      margin-top: 16px;
+      border-left: 3px solid;
+    }
+
+    .status-message.error {
+      background: rgba(192, 80, 58, 0.12);
+      border-color: var(--red);
+      color: #e07060;
+      display: block;
+    }
+
+    .status-message.info {
+      background: rgba(201, 146, 58, 0.08);
+      border-color: var(--gold);
+      color: var(--gold-light);
+      display: block;
+    }
+
+    .status-message.success {
+      background: rgba(90, 158, 111, 0.1);
+      border-color: var(--green);
+      color: #7ec495;
+      display: block;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       API Status Badge — shows if backend is reachable
+       ───────────────────────────────────────────────────────────── */
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .api-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.4s ease;
+    }
+
+    .api-status-dot.online  { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+    .api-status-dot.offline { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+    .api-status-dot.checking { background: var(--gold); animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Supported Languages Section
+       ───────────────────────────────────────────────────────────── */
+    .languages-section {
+      margin-top: 60px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+
+    .languages-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .language-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      transition: border-color var(--transition), transform var(--transition);
+    }
+
+    .language-card:hover {
+      border-color: var(--border-focus);
+      transform: translateY(-2px);
+    }
+
+    .language-card-pair {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--cream);
+      margin-bottom: 4px;
+    }
+
+    .language-card-model {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    .no-languages {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 20px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .no-languages a {
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    .no-languages a:hover {
+      text-decoration: underline;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Footer
+       ───────────────────────────────────────────────────────────── */
+    footer {
+      margin-top: 80px;
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-brand {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .footer-brand strong {
+      color: var(--gold);
+      font-style: normal;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      transition: color var(--transition);
+    }
+
+    .footer-links a:hover {
+      color: var(--gold-light);
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Page-load animation — elements fade in staggered
+       ───────────────────────────────────────────────────────────── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.5s ease forwards;
+    }
+
+    .fade-in:nth-child(1) { animation-delay: 0.05s; }
+    .fade-in:nth-child(2) { animation-delay: 0.12s; }
+    .fade-in:nth-child(3) { animation-delay: 0.19s; }
+    .fade-in:nth-child(4) { animation-delay: 0.26s; }
+    .fade-in:nth-child(5) { animation-delay: 0.33s; }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Translation result fade-in
+       ───────────────────────────────────────────────────────────── */
+    @keyframes resultAppear {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .result-visible {
+      animation: resultAppear 0.3s ease forwards;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ─────────────────────────── HEADER ─────────────────────────── -->
+  <div class="page-wrapper">
+    <header>
+      <div class="header-inner fade-in">
+        <h1 class="brand">La Lango <span>AI</span></h1>
+        <span class="brand-tag">Beta</span>
+      </div>
+      <p class="tagline fade-in">Community-driven translation for the world's overlooked languages</p>
+      <div class="header-links fade-in">
+        <a href="https://github.com/Wecncode/la-lango-ai" target="_blank">↗ GitHub</a>
+        <a href="https://github.com/Wecncode/la-lango-ai/blob/main/CONTRIBUTING.md" target="_blank">↗ Contribute</a>
+        <a href="http://localhost:8000/docs" target="_blank">↗ API Docs</a>
+      </div>
+    </header>
+
+    <!-- ─────────────────── LANGUAGE SELECTOR ──────────────────── -->
+    <section class="lang-selector-section fade-in">
+      <p class="section-label">Language Pair</p>
+      <div class="lang-row">
+        <div class="lang-select-wrapper">
+          <!--
+            Source language dropdown.
+            Languages are loaded from the API at /languages.
+            If the API is offline, a fallback option is shown.
+            TO ADD A LANGUAGE: add it to the backend SUPPORTED_PAIRS in lalango/api/routes.py
+          -->
+          <select id="source-lang" aria-label="Source language">
+            <option value="">Select source language…</option>
+          </select>
+        </div>
+
+        <span class="lang-arrow">→</span>
+
+        <div class="lang-select-wrapper">
+          <select id="target-lang" aria-label="Target language">
+            <option value="">Select target language…</option>
+          </select>
+        </div>
+
+        <!-- API connection status dot -->
+        <div class="api-status">
+          <div class="api-status-dot checking" id="api-dot"></div>
+          <span id="api-label">Connecting…</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────── TRANSLATION PANEL ──────────────────── -->
+    <section class="fade-in">
+      <div class="translation-panel">
+
+        <!-- Left side: source text input -->
+        <div class="panel-side">
+          <div class="panel-header">
+            <span class="panel-lang-name" id="source-lang-label">Source</span>
+            <div class="panel-meta">
+              <span class="char-count" id="char-count">0 / 500</span>
+            </div>
+          </div>
+          <!--
+            The source textarea.
+            Users type the text they want to translate here.
+            Pressing Ctrl+Enter also triggers translation.
+          -->
+          <textarea
+            id="source-text"
+            class="panel-textarea"
+            placeholder="Type or paste the text you want to translate…"
+            maxlength="500"
+            spellcheck="false"
+            aria-label="Source text"
+          ></textarea>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <!-- Right side: translation output -->
+        <div class="panel-side">
+          <div class="panel-header">
+            <span class="panel-lang-name" id="target-lang-label">Translation</span>
+            <div class="panel-meta">
+              <!--
+                Copy button — copies the translation to clipboard.
+                The JS for this is in the script section below.
+              -->
+              <button class="btn-icon" id="btn-copy" title="Copy translation" aria-label="Copy translation">
+                copy
+              </button>
+            </div>
+          </div>
+          <!--
+            The output area.
+            Filled in by the JS after a successful API call.
+          -->
+          <div
+            id="output-text"
+            class="panel-output empty"
+            aria-live="polite"
+            aria-label="Translation output"
+          >
+            Translation will appear here…
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Translate button and status message -->
+      <div class="action-row">
+        <button class="btn-translate" id="btn-translate" disabled>
+          <div class="spinner"></div>
+          <span class="btn-label">Translate</span>
+        </button>
+      </div>
+
+      <!-- Status message (error / info / success) -->
+      <div class="status-message" id="status-message" role="alert"></div>
+    </section>
+
+    <!-- ─────────────────── SUPPORTED LANGUAGES ─────────────────── -->
+    <section class="languages-section fade-in">
+      <p class="section-label">Supported Languages</p>
+      <!--
+        This grid is populated from the /languages API endpoint.
+        To add a new language pair, follow the guide in:
+        docs/adding_a_language.md
+      -->
+      <div class="languages-grid" id="languages-grid">
+        <!-- Filled by JS -->
+      </div>
+    </section>
+
+  </div><!-- end .page-wrapper -->
+
+  <!-- ─────────────────────────── FOOTER ─────────────────────────── -->
+  <footer>
+    <div class="footer-inner">
+      <p class="footer-brand">
+        Made by the <strong>Wecncode</strong> community
+      </p>
+      <div class="footer-links">
+        <a href="https://github.com/Wecncode/la-lango-ai" target="_blank">GitHub</a>
+        <a href="https://github.com/Wecncode/la-lango-ai/blob/main/ROADMAP.md" target="_blank">Roadmap</a>
+        <a href="https://github.com/Wecncode/la-lango-ai/issues" target="_blank">Issues</a>
+        <a href="https://github.com/Wecncode/la-lango-ai/blob/main/LICENSE" target="_blank">MIT License</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ─────────────────────────────────────────────────────────────
+       JavaScript
+       ─────────────────────────────────────────────────────────────
+       Everything is split into small, named functions so it is easy
+       to read and easy to contribute to.
+
+       Sections:
+         1. Configuration
+         2. DOM references
+         3. API helpers
+         4. UI state helpers
+         5. Language loading
+         6. Translation logic
+         7. Copy to clipboard
+         8. Character counter
+         9. Keyboard shortcut
+        10. Initialisation
+       ───────────────────────────────────────────────────────────── -->
+  <script>
+
+    // ─────────────────────────────────────────────────────────────
+    // 1. Configuration
+    // Change API_BASE_URL if your backend runs on a different port.
+    // ─────────────────────────────────────────────────────────────
+    const API_BASE_URL = 'http://localhost:8000';
+
+    const MAX_INPUT_CHARS = 500;
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 2. DOM references
+    // Grab all the elements we need once, at the top.
+    // ─────────────────────────────────────────────────────────────
+    const sourceLangSelect  = document.getElementById('source-lang');
+    const targetLangSelect  = document.getElementById('target-lang');
+    const sourceLangLabel   = document.getElementById('source-lang-label');
+    const targetLangLabel   = document.getElementById('target-lang-label');
+    const sourceTextarea    = document.getElementById('source-text');
+    const outputDiv         = document.getElementById('output-text');
+    const btnTranslate      = document.getElementById('btn-translate');
+    const btnCopy           = document.getElementById('btn-copy');
+    const charCountEl       = document.getElementById('char-count');
+    const statusMessageEl   = document.getElementById('status-message');
+    const apiDot            = document.getElementById('api-dot');
+    const apiLabel          = document.getElementById('api-label');
+    const languagesGrid     = document.getElementById('languages-grid');
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. API helpers
+    // Low-level functions that talk to the backend.
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Fetch the list of supported language pairs from the backend.
+     * Returns an array of objects: [{source_lang, target_lang, model}, ...]
+     */
+    async function fetchLanguages() {
+      const response = await fetch(`${API_BASE_URL}/languages`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }
+
+    /**
+     * Send a translation request to the backend.
+     * Returns the full response object: {translation, source_lang, target_lang, model}
+     */
+    async function fetchTranslation(text, sourceLang, targetLang) {
+      const response = await fetch(`${API_BASE_URL}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text:        text,
+          source_lang: sourceLang,
+          target_lang: targetLang,
+        }),
+      });
+
+      // If the server returned an error, parse and throw it
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    }
+
+    /**
+     * Check if the backend is reachable by hitting /health.
+     * Updates the API status dot in the UI.
+     */
+    async function checkApiHealth() {
+      // Set to "checking" state first
+      setApiStatus('checking', 'Connecting…');
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/health`, { signal: AbortSignal.timeout(4000) });
+        if (response.ok) {
+          setApiStatus('online', 'API online');
+        } else {
+          setApiStatus('offline', 'API error');
+        }
+      } catch {
+        setApiStatus('offline', 'API offline');
+      }
+    }
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. UI state helpers
+    // Functions that update the visual state of the page.
+    // ─────────────────────────────────────────────────────────────
+
+    /** Update the API status dot colour and label text */
+    function setApiStatus(state, label) {
+      apiDot.className = `api-status-dot ${state}`;
+      apiLabel.textContent = label;
+    }
+
+    /** Show a status message below the translate button */
+    function showStatus(message, type = 'info') {
+      // type can be: 'info', 'error', 'success'
+      statusMessageEl.textContent = message;
+      statusMessageEl.className = `status-message ${type}`;
+    }
+
+    /** Hide the status message */
+    function clearStatus() {
+      statusMessageEl.className = 'status-message';
+      statusMessageEl.textContent = '';
+    }
+
+    /** Put the translate button into loading state */
+    function setLoading(isLoading) {
+      btnTranslate.classList.toggle('loading', isLoading);
+      btnTranslate.disabled = isLoading;
+      btnTranslate.querySelector('.btn-label').textContent = isLoading ? 'Translating…' : 'Translate';
+    }
+
+    /** Update the output panel with a translation result */
+    function setOutput(text) {
+      outputDiv.textContent = text;
+      outputDiv.classList.remove('empty');
+      outputDiv.classList.add('result-visible');
+    }
+
+    /** Reset the output panel to its empty state */
+    function clearOutput() {
+      outputDiv.textContent = 'Translation will appear here…';
+      outputDiv.classList.add('empty');
+      outputDiv.classList.remove('result-visible');
+    }
+
+    /**
+     * Decide whether the Translate button should be enabled.
+     * It should only be active when:
+     *   - A source language is selected
+     *   - A target language is selected
+     *   - There is some text to translate
+     */
+    function updateTranslateButton() {
+      const hasSource = sourceLangSelect.value !== '';
+      const hasTarget = targetLangSelect.value !== '';
+      const hasText   = sourceTextarea.value.trim() !== '';
+      btnTranslate.disabled = !(hasSource && hasTarget && hasText);
+    }
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. Language loading
+    // Populate the dropdowns from the /languages endpoint.
+    // ─────────────────────────────────────────────────────────────
+
+    async function loadLanguages() {
+      try {
+        const languages = await fetchLanguages();
+        populateDropdowns(languages);
+        renderLanguageCards(languages);
+      } catch {
+        // If the API is unreachable, show a helpful message
+        showStatus(
+          'Could not load languages from the API. ' +
+          'Make sure the backend is running: uvicorn lalango.api.main:app --reload',
+          'error'
+        );
+        renderLanguageCards([]);
+      }
+    }
+
+    /**
+     * Fill the source and target dropdowns with unique language names
+     * extracted from the list of supported pairs.
+     */
+    function populateDropdowns(languages) {
+      // Collect all unique source and target language names
+      const sourceLanguages = [...new Set(languages.map(l => l.source_lang))].sort();
+      const targetLanguages = [...new Set(languages.map(l => l.target_lang))].sort();
+
+      // Clear existing options (keep the placeholder)
+      sourceLangSelect.innerHTML = '<option value="">Select source language…</option>';
+      targetLangSelect.innerHTML = '<option value="">Select target language…</option>';
+
+      // Add an option for each unique language
+      sourceLanguages.forEach(lang => {
+        const option = document.createElement('option');
+        option.value = lang;
+        option.textContent = capitalise(lang);
+        sourceLangSelect.appendChild(option);
+      });
+
+      targetLanguages.forEach(lang => {
+        const option = document.createElement('option');
+        option.value = lang;
+        option.textContent = capitalise(lang);
+        targetLangSelect.appendChild(option);
+      });
+    }
+
+    /**
+     * Render the language cards in the "Supported Languages" section.
+     */
+    function renderLanguageCards(languages) {
+      languagesGrid.innerHTML = '';
+
+      if (languages.length === 0) {
+        languagesGrid.innerHTML = `
+          <div class="no-languages" style="grid-column: 1/-1;">
+            No languages supported yet.<br/>
+            <a href="https://github.com/Wecncode/la-lango-ai/blob/main/docs/adding_a_language.md"
+               target="_blank">
+              Add the first one →
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      languages.forEach(lang => {
+        const card = document.createElement('div');
+        card.className = 'language-card';
+        card.innerHTML = `
+          <div class="language-card-pair">
+            ${capitalise(lang.source_lang)} → ${capitalise(lang.target_lang)}
+          </div>
+          <div class="language-card-model">${lang.model}</div>
+        `;
+
+        // Clicking a language card auto-selects it in the dropdowns
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => {
+          sourceLangSelect.value = lang.source_lang;
+          targetLangSelect.value = lang.target_lang;
+          updateLangLabels();
+          updateTranslateButton();
+          sourceTextarea.focus();
+        });
+
+        languagesGrid.appendChild(card);
+      });
+    }
+
+    /** Update the panel header labels to match the selected languages */
+    function updateLangLabels() {
+      sourceLangLabel.textContent = sourceLangSelect.value
+        ? capitalise(sourceLangSelect.value)
+        : 'Source';
+      targetLangLabel.textContent = targetLangSelect.value
+        ? capitalise(targetLangSelect.value)
+        : 'Translation';
+    }
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 6. Translation logic
+    // ─────────────────────────────────────────────────────────────
+
+    async function handleTranslate() {
+      const text       = sourceTextarea.value.trim();
+      const sourceLang = sourceLangSelect.value;
+      const targetLang = targetLangSelect.value;
+
+      // Validate inputs (the button should already be disabled if these are missing,
+      // but double-checking is good defensive coding)
+      if (!text || !sourceLang || !targetLang) {
+        showStatus('Please select a language pair and enter some text.', 'error');
+        return;
+      }
+
+      clearStatus();
+      setLoading(true);
+      clearOutput();
+
+      try {
+        const result = await fetchTranslation(text, sourceLang, targetLang);
+        setOutput(result.translation);
+        clearStatus();
+      } catch (error) {
+        showStatus(`Translation failed: ${error.message}`, 'error');
+        clearOutput();
+      } finally {
+        // Always turn off the loading state, whether we succeeded or failed
+        setLoading(false);
+      }
+    }
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 7. Copy to clipboard
+    // ─────────────────────────────────────────────────────────────
+
+    async function handleCopy() {
+      const text = outputDiv.textContent;
+
+      // Only copy if there is actual content (not the placeholder)
+      if (outputDiv.classList.contains('empty')) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        btnCopy.textContent = 'copied!';
+        setTimeout(() => { btnCopy.textContent = 'copy'; }, 1800);
+      } catch {
+        showStatus('Could not copy to clipboard. Try selecting the text manually.', 'error');
+      }
+    }
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 8. Character counter
+    // ─────────────────────────────────────────────────────────────
+
+    function updateCharCount() {
+      const count = sourceTextarea.value.length;
+      charCountEl.textContent = `${count} / ${MAX_INPUT_CHARS}`;
+      charCountEl.classList.toggle('over-limit', count >= MAX_INPUT_CHARS * 0.9);
+    }
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 9. Utility helpers
+    // ─────────────────────────────────────────────────────────────
+
+    /** Capitalise the first letter of a string */
+    function capitalise(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 10. Event listeners
+    // Wire up all the interactive elements.
+    // ─────────────────────────────────────────────────────────────
+
+    // Translate button click
+    btnTranslate.addEventListener('click', handleTranslate);
+
+    // Copy button click
+    btnCopy.addEventListener('click', handleCopy);
+
+    // Enable / disable the translate button as the user types
+    sourceTextarea.addEventListener('input', () => {
+      updateCharCount();
+      updateTranslateButton();
+      clearStatus();
+    });
+
+    // Update panel header labels when language selection changes
+    sourceLangSelect.addEventListener('change', () => {
+      updateLangLabels();
+      updateTranslateButton();
+      clearStatus();
+    });
+
+    targetLangSelect.addEventListener('change', () => {
+      updateLangLabels();
+      updateTranslateButton();
+      clearStatus();
+    });
+
+    // Keyboard shortcut: Ctrl+Enter (or Cmd+Enter on Mac) to translate
+    sourceTextarea.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        if (!btnTranslate.disabled) handleTranslate();
+      }
+    });
+
+
+    // ─────────────────────────────────────────────────────────────
+    // 11. Initialisation
+    // Run when the page first loads.
+    // ─────────────────────────────────────────────────────────────
+
+    async function init() {
+      // Check if the API is running and load language data
+      await checkApiHealth();
+      await loadLanguages();
+
+      // Re-check the API status every 30 seconds
+      setInterval(checkApiHealth, 30_000);
+    }
+
+    // Kick everything off
+    init();
+
+  </script>
+</body>
+</html>

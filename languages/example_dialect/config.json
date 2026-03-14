@@ -1,0 +1,13 @@
+{
+  "source_language": "Example Dialect",
+  "target_language": "English",
+  "source_iso_code": "und",
+  "target_iso_code": "eng",
+  "source_script": "Latin",
+  "target_script": "Latin",
+  "direction": "ltr",
+  "contributor": "your-github-username",
+  "data_source": "Describe where your parallel corpus comes from (e.g. community collection, academic dataset, government documents)",
+  "corpus_size": "Approximate number of sentence pairs, e.g. 5000",
+  "notes": "Any special notes about this language — tone marks, dialects, morphology, etc."
+}

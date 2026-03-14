@@ -1,0 +1,45 @@
+# This workflow runs automatically on every pull request.
+# It checks that the code follows our style guidelines and that all tests pass.
+# If either check fails, the PR cannot be merged until it is fixed.
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the code from the PR branch
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Step 3: Install all dependencies
+      # Requirements files live inside backend/
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-dev.txt
+
+      # Step 4: Run flake8 to check code style
+      # This will fail if there are obvious style errors like unused imports
+      - name: Lint with flake8
+        run: |
+          flake8 backend/lalango/ backend/scripts/ backend/tests/ --max-line-length=100
+
+      # Step 5: Run all tests
+      # PYTHONPATH=backend lets Python find lalango/ inside the backend folder
+      - name: Run tests
+        run: |
+          PYTHONPATH=backend pytest backend/tests/ -v

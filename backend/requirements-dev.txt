@@ -1,0 +1,11 @@
+# Development dependencies (testing, linting)
+# Install with: pip install -r requirements-dev.txt
+
+# Testing framework
+pytest==8.2.2
+
+# Linting — checks your code for style issues
+flake8==7.0.0
+
+# Jupyter notebooks — for the experiments/ folder
+jupyter==1.0.0
